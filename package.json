@@ -1,0 +1,15 @@
+{
+  "name": "allowedTime",
+  "version": "0.1.0",
+  "description": "allowedTime",
+  "main": "index.html",
+  "scripts": {
+    "test": "mocha",
+    "start": "http-server"
+  },
+  "author": "Carl Xiong <xiongc05@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "mocha": "^2.3.3"
+  }
+}

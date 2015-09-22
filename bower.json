@@ -1,0 +1,24 @@
+{
+  "name": "allowedTime",
+  "version": "0.1.0",
+  "authors": [
+    "Carl Xiong <xiongc05@gmail.com>"
+  ],
+  "description": "allowed time table",
+  "main": "index.html",
+  "moduleType": [
+    "globals"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "devDependencies": {
+    "d3": "~3.5.6",
+    "jquery": "~2.1.4"
+  }
+}

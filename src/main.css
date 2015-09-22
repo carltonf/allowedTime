@@ -1,0 +1,19 @@
+#draw {
+    border: 1px solid blue;
+    width: -moz-min-content;
+}
+
+.time-tile {
+    stroke: steelblue;
+    stroke-width: 1px;
+    /* without fill, the rectangle is actually just a closed path! And the click
+event only triggers when you click at the line!!!!! */
+    fill: none;
+    /* the default is auto, which is visiblePainted for SVG, and such none-fill
+interier would not trigger events */
+    pointer-events: visible;
+}
+
+.time-tile-selected {
+    fill: steelblue;
+}
