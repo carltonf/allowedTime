@@ -19,8 +19,8 @@ var config = {
   tile: {
     w: 25,
     h: 25,
-    mr: 2,
-    mb: 2,
+    mr: 1,
+    mb: 1,
   },
 };
 
@@ -34,7 +34,7 @@ for(var i = 0; i < 7; i++){
   tileGroup.push(weekTileGroup);
 }
 
-///////////////////////////////////////////////////////////////// 
+/////////////////////////////////////////////////////////////////
 var svgDraw = d3.select('#draw > svg'),
     svgCanvas = svgDraw
       .append('g')
@@ -129,7 +129,7 @@ allTiles
       // only for grouping for now
       return;
     }
-    
+
     grouping = new GroupingStatus(d3.select(this))
 
     // Prevent the browser treating the svg elements as image (so no image drag)
@@ -146,15 +146,14 @@ allTiles
 
     if (endRect){
       // clear the previous selection
-      // 
+      //
       // TODO highly inefficient, make groupTiles to return the selection to
       // make things easier.
-      groupTiles(startRect.datum(), endRect.datum(), !toSelectp);  
+      groupTiles(startRect.datum(), endRect.datum(), !toSelectp);
     }
-    
+
     endRect = grouping.endRect = d3.select(this); // target is this
 
-    // TODO with these two arguments we can simplify 'groupTiles'
     groupTiles(startRect.datum(), endRect.datum(), toSelectp);
 
     // console.log('mouse enter: ' + d.weekdayID + ': ' + d.startTimeID);
@@ -166,24 +165,30 @@ allTiles
     // console.log('mouseup: ' + d.weekdayID + ': ' + d.startTimeID);
   });
 
+svgCanvas.on('mouseleave.grouping-end', function(){
+  grouping = null;
+});
+
 // test for grouping
 function groupTiles(startG, endG, toSelectp){
-  // make sure the startG is always before endG
-  if (startG.weekdayID > endG.weekdayID
-      || ( startG.weekdayID == endG.weekdayID && startG.startTimeID > endG.startTimeID )){
-    var tmpG = startG;
-    startG = endG;
-    endG = tmpG;
-  }
+  // find out the left-top tile and the right-bottom tile
+  var ltTile = {
+    weekdayID: Math.min(startG.weekdayID, endG.weekdayID),
+    startTimeID: Math.min(startG.startTimeID, endG.startTimeID),
+  };
+  var rbTile = {
+    weekdayID: Math.max(startG.weekdayID, endG.weekdayID),
+    startTimeID: Math.max(startG.startTimeID, endG.startTimeID),
+  };
 
   toSelectp = toSelectp || false;
 
-  $($('.week-tile-group-grid').get(startG.weekdayID))
-    .nextUntil($('.week-tile-group-grid').get(endG.weekdayID + 1))
+  $($('.week-tile-group-grid').get(ltTile.weekdayID))
+    .nextUntil($('.week-tile-group-grid').get(rbTile.weekdayID + 1))
     .addBack()
     .each(function(){
-      $($(this).children().get(startG.startTimeID))
-        .nextUntil( $(this).children().get(endG.startTimeID + 1) )
+      $($(this).children().get(ltTile.startTimeID))
+        .nextUntil( $(this).children().get(rbTile.startTimeID + 1) )
         .addBack().each(function(){
           // jQuery *Class family doesn't work with SVG, we can use attr though,
           // or update to jQuery 3.0 for now let's use d3.select.
