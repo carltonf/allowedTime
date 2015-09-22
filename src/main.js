@@ -100,18 +100,20 @@ svgCanvas
 
 /////////////////////////////////////////////////////////////////
 // Interactivity
-var allTiles = d3.selectAll('.tile-group-grid rect');
 
-var grouping = {
-  startRect: null,
-  endRect: null,
+var GroupingStatus = function(sr, er){
+  this.startRect = sr;
+  this.endRect = er;
   // use the selected prop of the first mousedown tile to decide whether this
   // group is selecting or unselecting
-  toSelectp: false,
-  // until mouseup, the grouped tiles are temporary.
-  // curGroup: [],
+  this.toSelectp = !sr.datum().selected;
 };
+var grouping = null;
 
+var allTiles = d3.selectAll('.tile-group-grid rect');
+
+// TODO check the event, decide actions, update UI, update model, all happen
+// within event handlers. The concrete actions on model should be decoupled using event.
 allTiles
   .on('click.select', function(d, i){
     var target = d3.select(d3.event.target);
@@ -120,23 +122,23 @@ allTiles
     target.classed('time-tile-selected', d.selected);
 
     // debug
-    console.log('click at: ' + d.weekdayID + ': ' + d.startTimeID);
+    // console.log('click at: ' + d.weekdayID + ': ' + d.startTimeID);
   })
   .on('mousedown.grouping-start', function(d, i){
     if (d3.event.which != 1){
-      console.log('mousedown: only reacts to primary button.');
+      // only for grouping for now
       return;
     }
-    grouping.startRect = d3.select(this);
-    grouping.toSelectp = !d.selected;
+    
+    grouping = new GroupingStatus(d3.select(this))
 
     // Prevent the browser treating the svg elements as image (so no image drag)
     d3.event.preventDefault();
 
-    console.log('mouse down: ' + d.weekdayID + ': ' + d.startTimeID);
+    // console.log('mouse down: ' + d.weekdayID + ': ' + d.startTimeID);
   })
   .on('mouseenter.grouping-move', function(d, i){
-    if (!grouping.startRect) return;
+    if (!grouping) return;
 
     var startRect = grouping.startRect,
         endRect = grouping.endRect,
@@ -155,16 +157,13 @@ allTiles
     // TODO with these two arguments we can simplify 'groupTiles'
     groupTiles(startRect.datum(), endRect.datum(), toSelectp);
 
-    console.log('mouse enter: ' + d.weekdayID + ': ' + d.startTimeID);
+    // console.log('mouse enter: ' + d.weekdayID + ': ' + d.startTimeID);
   })
   .on('mouseup.grouping-end', function(d, i){
     // reset grouping properties to the default
-    // TODO use object creation/deletion
-    grouping.startRect = null;
-    grouping.endRect = null;
-    grouping.toSelectp = false;
+    grouping = null;
 
-    console.log('mouseup: ' + d.weekdayID + ': ' + d.startTimeID);
+    // console.log('mouseup: ' + d.weekdayID + ': ' + d.startTimeID);
   });
 
 // test for grouping
@@ -178,18 +177,6 @@ function groupTiles(startG, endG, toSelectp){
   }
 
   toSelectp = toSelectp || false;
-
-  // var tiles = $(undefined);
-  // $($('.week-tile-group-grid').get(startG.weekdayID))
-  //   .nextUntil($('.week-tile-group-grid').get(endG.weekdayID + 1))
-  //   .addBack()
-  //   .each(function(){
-  //     tiles = tiles.add(
-  //       $($(this).children().get(startG.startTimeID))
-  //         .nextUntil( $(this).children().get(endG.startTimeID + 1) )
-  //         .addBack()
-  //     );
-  //   });
 
   $($('.week-tile-group-grid').get(startG.weekdayID))
     .nextUntil($('.week-tile-group-grid').get(endG.weekdayID + 1))
@@ -206,14 +193,6 @@ function groupTiles(startG, endG, toSelectp){
           d3.select(this).classed('time-tile-selected', function(d){
             return d.selected = toSelectp;
           });
-
-          //// flip the selection
-          // d3.select(this).classed('time-tile-selected', function(d){
-          //   return d.selected = !d.selected;
-          // });
         });
     });
 }
-
-groupTiles({weekdayID: 1, startTimeID: 2,}, {weekdayID: 4, startTimeID: 11,});
-groupTiles({weekdayID: 2, startTimeID: 3,}, {weekdayID: 3, startTimeID: 7,});
