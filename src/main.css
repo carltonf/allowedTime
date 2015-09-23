@@ -17,3 +17,11 @@ interier would not trigger events */
 .time-tile-selected {
     fill: steelblue;
 }
+
+.time-tile-selecting {
+    fill: lightblue;
+}
+
+.time-tile-deselecting {
+    fill: lightgrey;
+}

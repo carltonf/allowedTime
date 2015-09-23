@@ -109,8 +109,9 @@ var GroupingStatus = function(sr, er){
 
   // use the selected prop of the start tile to decide whether this grouping is
   // selecting or deselecting
+  //
   // TODO a policy configuration: all (de)select or invert for every tile
-  this.toSelectp = !sr.datum().selected;
+  // (invert is the current implementation)
 
   this.$lastGroupedTiles = $();
 };
@@ -131,7 +132,7 @@ allTiles
     if (d3.event.which != 1)
       return;
 
-    grouping = new GroupingStatus(d3.select(this))
+    grouping = new GroupingStatus(d3.select(this));
 
     // Prevent the browser treating the svg elements as image (so no image drag)
     d3.event.preventDefault();
@@ -146,20 +147,28 @@ allTiles
         newlySelectedTiles = curGroupedTiles.not(lastGroupedTiles),
         newlyDeselectedTiles = lastGroupedTiles.not(curGroupedTiles);
 
+    // TODO about how to group
+    //
+    // 1. No grouping back. It's like painting brush, once a tile is touched it's
+    // selected, you can not move back.
+    //
+    // 2. Allow grouping back. Then it should restore the original state of
+    // newly deselected tiles. (currently I'm implementing this version)
+
     // only update the necessary part
-    
     // TODO make two-way data binding
     d3.selectAll(newlySelectedTiles.get())
-      .classed('time-tile-selected', grouping.toSelectp)
-      .each(function(d) {
-        d.selected = grouping.toSelectp;
+      .classed({
+        'time-tile-selected': false,
+        'time-tile-selecting': function(d){ return !d.selected; },
+        'time-tile-deselecting': function(d){ return d.selected; },
       });
 
     d3.selectAll(newlyDeselectedTiles.get())
-      .classed('time-tile-selected', !grouping.toSelectp)
-      .each(function(d) {
-        d.selected = !grouping.toSelectp;
-      });
+      .classed('time-tile-selecting', false)
+      .classed('time-tile-deselecting', false)
+      .classed('time-tile-selected', function(d){ return d.selected; });
+
 
     // memorize the current grouped tiles.
     grouping.$lastGroupedTiles = curGroupedTiles;
@@ -167,18 +176,35 @@ allTiles
 
     // console.log('mouse enter: ' + d.weekdayID + ': ' + d.startTimeID);
   })
-  .on('mouseup.grouping-end', function(d, i){
-    // reset grouping properties to the default
-    grouping = null;
-
-    // console.log('mouseup: ' + d.weekdayID + ': ' + d.startTimeID);
-  });
+  .on('mouseup.grouping-end', groupingEndSync);
 
 // stop grouping when moving out the SVG area
 // TODO change the cursor shape to make this effect more obvious
-svgDraw.on('mouseleave.grouping-end', function(){
+svgDraw.on('mouseleave.grouping-end', groupingEndSync);
+
+function groupingEndSync(){
+  if (!grouping) return;
+
+  d3.selectAll('.time-tile-selecting, .time-tile-deselecting')
+    .each(function(d){
+      d.selected = !d.selected;
+    });
+
+  d3.selectAll('.time-tile-selecting')
+    .classed({
+      'time-tile-selecting': false,
+      'time-tile-selected': true,
+    });
+
+  d3.selectAll('.time-tile-deselecting')
+    .classed({
+      'time-tile-deselecting': false,
+      'time-tile-selected': false,
+    });
+
+
   grouping = null;
-});
+}
 
 // get jQuery collection of tiles to group with regards to startRect and endRect
 function getTiles2Group(startRect, endRect){
@@ -198,7 +224,7 @@ function getTiles2Group(startRect, endRect){
 
 /////////////////////////////////////////////////////////////////
 //// About converting jQuery object into D3 selections:
-// 
+//
 // jQuery *Class family doesn't work with SVG, we can use attr though,
 // or update to jQuery 3.0 for now let's use d3.select.
 //
