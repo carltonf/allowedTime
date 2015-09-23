@@ -1,3 +1,4 @@
+
 var TimeTile = function(wd, st){
   this.weekdayID = wd;
   this.startTimeID = st;
@@ -102,11 +103,17 @@ svgCanvas
 // Interactivity
 
 var GroupingStatus = function(sr, er){
+  // startRect and endRect are D3 selections
   this.startRect = sr;
   this.endRect = er;
-  // use the selected prop of the first mousedown tile to decide whether this
-  // group is selecting or unselecting
+
+  // use the selected prop of the start tile to decide whether this grouping is
+  // selecting or deselecting
+  // TODO a policy configuration: all (de)select or invert for every tile
   this.toSelectp = !sr.datum().selected;
+
+  // group tiles are jQuery object
+  this.lastGroupedTiles = $();
 };
 var grouping = null;
 
@@ -116,19 +123,14 @@ var allTiles = d3.selectAll('.tile-group-grid rect');
 // within event handlers. The concrete actions on model should be decoupled using event.
 allTiles
   .on('click.select', function(d, i){
-    var target = d3.select(d3.event.target);
+    d3.select(this).classed('time-tile-selected',
+                            d.selected = !d.selected);
 
-    d.selected = !d.selected;
-    target.classed('time-tile-selected', d.selected);
-
-    // debug
     // console.log('click at: ' + d.weekdayID + ': ' + d.startTimeID);
   })
   .on('mousedown.grouping-start', function(d, i){
-    if (d3.event.which != 1){
-      // only for grouping for now
+    if (d3.event.which != 1)
       return;
-    }
 
     grouping = new GroupingStatus(d3.select(this))
 
@@ -140,21 +142,29 @@ allTiles
   .on('mouseenter.grouping-move', function(d, i){
     if (!grouping) return;
 
-    var startRect = grouping.startRect,
-        endRect = grouping.endRect,
-        toSelectp = grouping.toSelectp;
+    var curGroupedTiles = getTiles2Group(grouping.startRect.datum(), d),
+        lastGroupedTiles = grouping.lastGroupedTiles,
+        newlySelectedTiles = curGroupedTiles.not(lastGroupedTiles),
+        newlyDeselectedTiles = lastGroupedTiles.not(curGroupedTiles);
 
-    if (endRect){
-      // clear the previous selection
-      //
-      // TODO highly inefficient, make groupTiles to return the selection to
-      // make things easier.
-      groupTiles(startRect.datum(), endRect.datum(), !toSelectp);
-    }
+    // only update the necessary part
+    
+    // TODO make two-way data binding
+    d3.selectAll(newlySelectedTiles.get())
+      .classed('time-tile-selected', grouping.toSelectp)
+      .each(function(d) {
+        d.selected = grouping.toSelectp;
+      });
 
-    endRect = grouping.endRect = d3.select(this); // target is this
+    d3.selectAll(newlyDeselectedTiles.get())
+      .classed('time-tile-selected', !grouping.toSelectp)
+      .each(function(d) {
+        d.selected = !grouping.toSelectp;
+      });
 
-    groupTiles(startRect.datum(), endRect.datum(), toSelectp);
+    // memorize the current grouped tiles.
+    grouping.lastGroupedTiles = curGroupedTiles;
+    grouping.endRect = d3.select(this);
 
     // console.log('mouse enter: ' + d.weekdayID + ': ' + d.startTimeID);
   })
@@ -165,39 +175,33 @@ allTiles
     // console.log('mouseup: ' + d.weekdayID + ': ' + d.startTimeID);
   });
 
-svgCanvas.on('mouseleave.grouping-end', function(){
+// stop grouping when moving out the SVG area
+// TODO change the cursor shape to make this effect more obvious
+svgDraw.on('mouseleave.grouping-end', function(){
   grouping = null;
 });
 
-// test for grouping
-function groupTiles(startG, endG, toSelectp){
-  // find out the left-top tile and the right-bottom tile
-  var ltTile = {
-    weekdayID: Math.min(startG.weekdayID, endG.weekdayID),
-    startTimeID: Math.min(startG.startTimeID, endG.startTimeID),
-  };
-  var rbTile = {
-    weekdayID: Math.max(startG.weekdayID, endG.weekdayID),
-    startTimeID: Math.max(startG.startTimeID, endG.startTimeID),
-  };
+// get jQuery collection of tiles to group with regards to startRect and endRect
+function getTiles2Group(startRect, endRect){
+  var weekDayExtent = d3.extent([startRect.weekdayID, endRect.weekdayID]),
+      timeExtent = d3.extent([startRect.startTimeID, endRect.startTimeID]),
+      tiles = $();
 
-  toSelectp = toSelectp || false;
-
-  $($('.week-tile-group-grid').get(ltTile.weekdayID))
-    .nextUntil($('.week-tile-group-grid').get(rbTile.weekdayID + 1))
-    .addBack()
+  $('.week-tile-group-grid').slice(weekDayExtent[0], weekDayExtent[1] + 1)
     .each(function(){
-      $($(this).children().get(ltTile.startTimeID))
-        .nextUntil( $(this).children().get(rbTile.startTimeID + 1) )
-        .addBack().each(function(){
-          // jQuery *Class family doesn't work with SVG, we can use attr though,
-          // or update to jQuery 3.0 for now let's use d3.select.
-          //
-          // see http://stackoverflow.com/questions/8638621/jquery-svg-why-cant-i-addclass
-          // for more details
-          d3.select(this).classed('time-tile-selected', function(d){
-            return d.selected = toSelectp;
-          });
-        });
+      tiles = tiles.add(
+        $(this).children().slice(timeExtent[0], timeExtent[1] + 1)
+      );
     });
+
+  return tiles;
 }
+
+/////////////////////////////////////////////////////////////////
+//// About converting jQuery object into D3 selections:
+// 
+// jQuery *Class family doesn't work with SVG, we can use attr though,
+// or update to jQuery 3.0 for now let's use d3.select.
+//
+// see http://stackoverflow.com/questions/8638621/jquery-svg-why-cant-i-addclass
+// for more details
