@@ -112,8 +112,7 @@ var GroupingStatus = function(sr, er){
   // TODO a policy configuration: all (de)select or invert for every tile
   this.toSelectp = !sr.datum().selected;
 
-  // group tiles are jQuery object
-  this.lastGroupedTiles = $();
+  this.$lastGroupedTiles = $();
 };
 var grouping = null;
 
@@ -143,7 +142,7 @@ allTiles
     if (!grouping) return;
 
     var curGroupedTiles = getTiles2Group(grouping.startRect.datum(), d),
-        lastGroupedTiles = grouping.lastGroupedTiles,
+        lastGroupedTiles = grouping.$lastGroupedTiles,
         newlySelectedTiles = curGroupedTiles.not(lastGroupedTiles),
         newlyDeselectedTiles = lastGroupedTiles.not(curGroupedTiles);
 
@@ -163,7 +162,7 @@ allTiles
       });
 
     // memorize the current grouped tiles.
-    grouping.lastGroupedTiles = curGroupedTiles;
+    grouping.$lastGroupedTiles = curGroupedTiles;
     grouping.endRect = d3.select(this);
 
     // console.log('mouse enter: ' + d.weekdayID + ': ' + d.startTimeID);
